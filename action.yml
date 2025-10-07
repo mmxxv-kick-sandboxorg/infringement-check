@@ -1,0 +1,54 @@
+# .github/actions/infringement-check/action.yml
+name: 'Copyright Check'
+description: 'Check copyright infringement in pull requests using Azure Content Safety API'
+
+inputs:
+  pr_number:
+    description: 'Pull request number to check'
+    required: true
+  python_version:
+    description: 'Python version to use'
+    required: false
+    default: "3.11" 
+  GH_TOKEN:
+    description: 'GitHub token for API access'
+    required: true
+  HUGGINGFACE_TOKEN:
+    description: 'HuggingFace access token'
+    required: true
+  AACS:
+    description: 'Azure Content Safety endpoint URL'
+    required: true
+  AACSAPIkey:
+    description: 'Azure Content Safety API key'
+    required: true
+
+runs:
+  using: "composite" 
+  steps:
+    # 呼び出し元のリポジトリをチェックアウト（PR差分取得のため）
+    - name: Checkout caller repository
+      uses: actions/checkout@v4
+
+    # Python 環境をセットアップ
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    # 依存ライブラリをインストール
+    - name: Install dependencies
+      shell: bash
+      run: pip install --prefer-binary --use-feature=fast-deps -r ${{ github.action_path }}/requirements.txt
+
+    # Python スクリプトを PR 番号付きで実行
+    - name: Run Python script with PR number
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+        HUGGINGFACE_TOKEN: ${{ inputs.HUGGINGFACE_TOKEN }}
+        AACS: ${{ inputs.AACS }}
+        AACSAPIkey: ${{ inputs.AACSAPIkey }}
+        PYTHONIOENCODING: utf-8
+      run: |
+        python ${{ github.action_path }}/scripts/gitDiffCheck.py ${{ inputs.pr_number }}
